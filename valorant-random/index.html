@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>Valorant Random Team Generator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        h1 {
+            margin-bottom: 20px;
+        }
+        .team {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: nowrap;
+        }
+        .card {
+            background: #1e1e1e;
+            border-radius: 12px;
+            padding: 10px;
+            width: 180px;
+            text-align: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .card img {
+            width: 100%;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            background-color: #ff4655;
+            color: white;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background-color: #e03e4c;
+        }
+    </style>
+</head>
+<body>
+<h1>VALORANT ランダム編成</h1>
+<button onclick="generateTeam()">チームを生成</button>
+<div class="team" id="team"></div>
+
+<script>
+    const agents = {
+        "デュエリスト": { "ジェット": "images/ジェット.avif", "レイズ": "images/レイズ.avif", "フェニックス": "images/フェニックス.avif", "レイナ": "images/レイナ.avif", "ヨル": "images/ヨル.avif", "ネオン": "images/ネオン.avif", "アイソ": "images/アイソ.avif" },
+        "センチネル": { "セージ": "images/セージ.avif", "サイファー": "images/サイファー.avif", "キルジョイ": "images/キルジョイ.avif", "チェンバー": "images/チェンバー.avif", "デッドロック": "images/デッドロック.avif", "ヴァイス": "images/ヴァイス.avif" },
+        "イニシエーター": { "ブリーチ": "images/ブリーチ.avif", "ソーヴァ": "images/ソーヴァ.avif", "スカイ": "images/スカイ.avif", "KAY/O": "images/KAYO.avif", "フェイド": "images/フェイド.avif", "ゲッコー": "images/ゲッコー.avif" },
+        "コントローラー": { "ヴァイパー": "images/ヴァイパー.avif", "アストラ": "images/アストラ.avif", "ハーバー": "images/ハーバー.avif", "クローヴ": "images/クローヴ.avif" }
+    };
+
+    function getRandomAgent(role, exclude=[]) {
+        const keys = Object.keys(agents[role]).filter(name => !exclude.includes(name));
+        const name = keys[Math.floor(Math.random() * keys.length)];
+        return { name, img: agents[role][name] };
+    }
+
+    function generateTeam() {
+        const roles = ["デュエリスト", "センチネル", "イニシエーター", "コントローラー"];
+        const teamDiv = document.getElementById("team");
+        teamDiv.innerHTML = "";
+
+        const selectedAgents = [];
+
+        // 各ロール1人ずつ
+        roles.forEach(role => {
+            let pick = getRandomAgent(role);
+            selectedAgents.push(pick.name);
+            createCard(pick, role);
+        });
+
+        // 自由枠（先に選ばれた4人を除く）
+        const allAgents = [].concat(...roles.map(r => Object.keys(agents[r])));
+        const remainingAgents = allAgents.filter(agent => !selectedAgents.includes(agent));
+        const free = remainingAgents[Math.floor(Math.random() * remainingAgents.length)];
+
+        let freeRole;
+        for (let r of roles) {
+            if (agents[r][free]) {
+                freeRole = r;
+                break;
+            }
+        }
+        createCard({ name: free, img: agents[freeRole][free] }, "自由枠");
+    }
+
+    function createCard(agent, role) {
+        const teamDiv = document.getElementById("team");
+        const card = document.createElement("div");
+        card.className = "card";
+        card.innerHTML = `
+        <img src="${agent.img}" alt="${agent.name}">
+        <h3>${role}</h3>
+        <p>${agent.name}</p>
+    `;
+        teamDiv.appendChild(card);
+    }
+</script>
+
+</body>
+</html>
