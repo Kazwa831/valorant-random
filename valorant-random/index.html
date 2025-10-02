@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>Valorant Random Team Generator</title>
+    <title>VALORANT ランダム編成</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,9 +11,10 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
             min-height: 100vh;
             margin: 0;
+            padding: 20px;
         }
         h1 {
             margin-bottom: 20px;
@@ -22,7 +23,8 @@
             display: flex;
             gap: 20px;
             margin-top: 20px;
-            flex-wrap: nowrap;
+            flex-wrap: wrap;
+            justify-content: center;
         }
         .card {
             background: #1e1e1e;
@@ -68,6 +70,7 @@
 
     function getRandomAgent(role, exclude=[]) {
         const keys = Object.keys(agents[role]).filter(name => !exclude.includes(name));
+        if(keys.length === 0) return null;
         const name = keys[Math.floor(Math.random() * keys.length)];
         return { name, img: agents[role][name] };
     }
@@ -79,26 +82,24 @@
 
         const selectedAgents = [];
 
-        // 各ロール1人ずつ
+        // 各ロール1人ずつ選択
         roles.forEach(role => {
-            let pick = getRandomAgent(role);
-            selectedAgents.push(pick.name);
-            createCard(pick, role);
+            let pick = getRandomAgent(role, selectedAgents);
+            if(pick) {
+                selectedAgents.push(pick.name);
+                createCard(pick, role);
+            }
         });
 
         // 自由枠（先に選ばれた4人を除く）
         const allAgents = [].concat(...roles.map(r => Object.keys(agents[r])));
         const remainingAgents = allAgents.filter(agent => !selectedAgents.includes(agent));
-        const free = remainingAgents[Math.floor(Math.random() * remainingAgents.length)];
-
-        let freeRole;
-        for (let r of roles) {
-            if (agents[r][free]) {
-                freeRole = r;
-                break;
-            }
+        if(remainingAgents.length > 0) {
+            const free = remainingAgents[Math.floor(Math.random() * remainingAgents.length)];
+            let freeRole = roles.find(r => agents[r][free]);
+            if(!freeRole) freeRole = "デュエリスト"; // 念のため
+            createCard({ name: free, img: agents[freeRole][free] }, "自由枠");
         }
-        createCard({ name: free, img: agents[freeRole][free] }, "自由枠");
     }
 
     function createCard(agent, role) {
@@ -113,6 +114,5 @@
         teamDiv.appendChild(card);
     }
 </script>
-
 </body>
 </html>
