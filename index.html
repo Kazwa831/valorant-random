@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>VALORANT ランダム編成</title>
+    <title>Valorant Team Generator</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -16,15 +16,42 @@
             margin: 0;
             padding: 20px;
         }
-        h1 {
-            margin-bottom: 20px;
-        }
-        .team {
+        h1 { margin-bottom: 20px; }
+        .controls {
             display: flex;
-            gap: 20px;
-            margin-top: 20px;
+            gap: 10px;
             flex-wrap: wrap;
             justify-content: center;
+            margin-bottom: 20px;
+        }
+        input, select, button {
+            padding: 10px;
+            border-radius: 6px;
+            border: none;
+            font-size: 14px;
+        }
+        input, select {
+            min-width: 150px;
+        }
+        button {
+            background-color: #ff4655;
+            color: #fff;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover { background-color: #e03e4c; }
+        .waiting-list, .team {
+            margin-top: 20px;
+            width: 100%;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .waiting-item {
+            background: #2a2a2a;
+            padding: 8px 12px;
+            border-radius: 6px;
         }
         .card {
             background: #1e1e1e;
@@ -39,70 +66,109 @@
             border-radius: 8px;
             margin-bottom: 10px;
         }
-        button {
-            margin-top: 20px;
-            padding: 12px 24px;
-            font-size: 16px;
-            border: none;
-            border-radius: 8px;
-            background-color: #ff4655;
-            color: white;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-        button:hover {
-            background-color: #e03e4c;
-        }
     </style>
 </head>
 <body>
 <h1>VALORANT ランダム編成</h1>
-<button onclick="generateTeam()">チームを生成</button>
+<div class="controls">
+    <input type="text" id="playerName" placeholder="プレイヤー名">
+    <select id="roleSelect">
+        <option value="自由枠">自由枠</option>
+        <option value="デュエリスト">デュエリスト</option>
+        <option value="センチネル">センチネル</option>
+        <option value="イニシエーター">イニシエーター</option>
+        <option value="コントローラー">コントローラー</option>
+    </select>
+    <button onclick="addPlayer()">追加</button>
+    <button onclick="generateTeam()">チームを生成</button>
+</div>
+
+<h2>待機リスト</h2>
+<div class="waiting-list" id="waitingList"></div>
+
+<h2>チーム</h2>
 <div class="team" id="team"></div>
 
 <script>
     const agents = {
-        "デュエリスト": { "ジェット": "images/jett.avif", "レイズ": "images/raze.avif", "フェニックス": "images/phoenix.avif", "レイナ": "images/reyna.avif", "ヨル": "images/yoru.avif", "ネオン": "images/neon.avif", "アイソ": "images/iso.avif" },
-        "センチネル": { "セージ": "images/sage.avif", "サイファー": "images/cypher.avif", "キルジョイ": "images/killjoy.avif", "チェンバー": "images/chamber.avif", "デッドロック": "images/deadlock.avif", "ヴァイス": "images/vyse.avif" },
-        "イニシエーター": { "ブリーチ": "images/breach.avif", "ソーヴァ": "images/sova.avif", "スカイ": "images/sky.avif", "KAY/O": "images/kayo.avif", "フェイド": "images/fade.avif", "ゲッコー": "images/gekko.avif" },
-        "コントローラー": { "ヴァイパー": "images/viper.avif", "アストラ": "images/astra.avif", "ハーバー": "images/harbor.avif", "クローヴ": "images/clove.avif" }
+        "デュエリスト": {
+            "ジェット": "images/jett.avif","レイズ": "images/raze.avif","フェニックス": "images/phoenix.avif",
+            "レイナ": "images/reyna.avif","ヨル": "images/yoru.avif","ネオン": "images/neon.avif","アイソ": "images/iso.avif"
+        },
+        "センチネル": {
+            "セージ": "images/sage.avif","サイファー": "images/cypher.avif","キルジョイ": "images/killjoy.avif",
+            "チェンバー": "images/chamber.avif","デッドロック": "images/deadlock.avif","ヴァイス": "images/vyse.avif"
+        },
+        "イニシエーター": {
+            "ブリーチ": "images/breach.avif","ソーヴァ": "images/sova.avif","スカイ": "images/sky.avif",
+            "KAY/O": "images/kayo.avif","フェイド": "images/fade.avif","ゲッコー": "images/gekko.avif"
+        },
+        "コントローラー": {
+            "ヴァイパー": "images/viper.avif","アストラ": "images/astra.avif","ハーバー": "images/harbor.avif","クローヴ": "images/clove.avif"
+        }
     };
 
-    function getRandomAgent(role, exclude=[]) {
-        const keys = Object.keys(agents[role]).filter(name => !exclude.includes(name));
-        if(keys.length === 0) return null;
-        const name = keys[Math.floor(Math.random() * keys.length)];
-        return { name, img: agents[role][name] };
+    const waitingPlayers = [];
+
+    function addPlayer() {
+        const playerName = document.getElementById("playerName").value.trim();
+        const roleSelect = document.getElementById("roleSelect").value;
+        if (!playerName) {
+            alert("プレイヤー名を入力してください");
+            return;
+        }
+        if (waitingPlayers.length >= 5) {
+            alert("すでに5人登録されています");
+            return;
+        }
+        waitingPlayers.push({ name: playerName, role: roleSelect });
+        updateWaitingList();
+        document.getElementById("playerName").value = ""; // 入力リセット
+    }
+
+    function updateWaitingList() {
+        const waitingDiv = document.getElementById("waitingList");
+        waitingDiv.innerHTML = "";
+        waitingPlayers.forEach((p, i) => {
+            const div = document.createElement("div");
+            div.className = "waiting-item";
+            div.textContent = `${i+1}. ${p.name} (${p.role})`;
+            waitingDiv.appendChild(div);
+        });
+    }
+
+    function getRandomAgent(role) {
+        const pool = role === "自由枠"
+            ? Object.values(agents).flatMap(r => Object.keys(r))
+            : Object.keys(agents[role]);
+
+        const name = pool[Math.floor(Math.random() * pool.length)];
+
+        let roleFound = role;
+        if (role === "自由枠") {
+            for (const r in agents) {
+                if (agents[r][name]) { roleFound = r; break; }
+            }
+        }
+
+        return { name, img: agents[roleFound][name], role: roleFound };
     }
 
     function generateTeam() {
-        const roles = ["デュエリスト", "センチネル", "イニシエーター", "コントローラー"];
+        if (waitingPlayers.length < 5) {
+            alert("5人揃ってからチームを生成してください");
+            return;
+        }
         const teamDiv = document.getElementById("team");
         teamDiv.innerHTML = "";
 
-        const selectedAgents = [];
-
-        // 各ロール1人ずつ選択
-        roles.forEach(role => {
-            let pick = getRandomAgent(role, selectedAgents);
-            if(pick) {
-                selectedAgents.push(pick.name);
-                createCard(pick, role);
-            }
+        waitingPlayers.forEach(player => {
+            const agent = getRandomAgent(player.role);
+            createCard(agent, player.role, player.name);
         });
-
-        // 自由枠（先に選ばれた4人を除く）
-        const allAgents = [].concat(...roles.map(r => Object.keys(agents[r])));
-        const remainingAgents = allAgents.filter(agent => !selectedAgents.includes(agent));
-        if(remainingAgents.length > 0) {
-            const free = remainingAgents[Math.floor(Math.random() * remainingAgents.length)];
-            let freeRole = roles.find(r => agents[r][free]);
-            if(!freeRole) freeRole = "デュエリスト"; // 念のため
-            createCard({ name: free, img: agents[freeRole][free] }, "自由枠");
-        }
     }
 
-    function createCard(agent, role) {
+    function createCard(agent, role, playerName) {
         const teamDiv = document.getElementById("team");
         const card = document.createElement("div");
         card.className = "card";
@@ -110,7 +176,8 @@
         <img src="${agent.img}" alt="${agent.name}">
         <h3>${role}</h3>
         <p>${agent.name}</p>
-    `;
+        <strong>選んだ人: ${playerName}</strong>
+      `;
         teamDiv.appendChild(card);
     }
 </script>
