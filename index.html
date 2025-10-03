@@ -80,7 +80,8 @@
         <option value="コントローラー">コントローラー</option>
     </select>
     <button onclick="addPlayer()">追加</button>
-    <button onclick="generateTeam()">チームを生成</button>
+    <button onclick="assignRoles()">ロール抽選</button>
+    <button onclick="generateTeam()">キャラ抽選</button>
 </div>
 
 <h2>待機リスト</h2>
@@ -92,93 +93,106 @@
 <script>
     const agents = {
         "デュエリスト": {
-            "ジェット": "images/jett.avif","レイズ": "images/raze.avif","フェニックス": "images/phoenix.avif",
-            "レイナ": "images/reyna.avif","ヨル": "images/yoru.avif","ネオン": "images/neon.avif","アイソ": "images/iso.avif"
+            "ジェット":"images/jett.avif","レイズ":"images/raze.avif","フェニックス":"images/phoenix.avif",
+            "レイナ":"images/reyna.avif","ヨル":"images/yoru.avif","ネオン":"images/neon.avif","アイソ":"images/iso.avif"
         },
         "センチネル": {
-            "セージ": "images/sage.avif","サイファー": "images/cypher.avif","キルジョイ": "images/killjoy.avif",
-            "チェンバー": "images/chamber.avif","デッドロック": "images/deadlock.avif","ヴァイス": "images/vyse.avif"
+            "セージ":"images/sage.avif","サイファー":"images/cypher.avif","キルジョイ":"images/killjoy.avif",
+            "チェンバー":"images/chamber.avif","デッドロック":"images/deadlock.avif","ヴァイス":"images/vyse.avif"
         },
         "イニシエーター": {
-            "ブリーチ": "images/breach.avif","ソーヴァ": "images/sova.avif","スカイ": "images/sky.avif",
-            "KAY/O": "images/kayo.avif","フェイド": "images/fade.avif","ゲッコー": "images/gekko.avif"
+            "ブリーチ":"images/breach.avif","ソーヴァ":"images/sova.avif","スカイ":"images/sky.avif",
+            "KAY/O":"images/kayo.avif","フェイド":"images/fade.avif","ゲッコー":"images/gekko.avif"
         },
         "コントローラー": {
-            "ヴァイパー": "images/viper.avif","アストラ": "images/astra.avif","ハーバー": "images/harbor.avif","クローヴ": "images/clove.avif"
+            "ヴァイパー":"images/viper.avif","アストラ":"images/astra.avif","ハーバー":"images/harbor.avif","クローヴ":"images/clove.avif"
         }
     };
 
     const waitingPlayers = [];
 
+    // 名前追加
     function addPlayer() {
         const playerName = document.getElementById("playerName").value.trim();
-        const roleSelect = document.getElementById("roleSelect").value;
-        if (!playerName) {
-            alert("プレイヤー名を入力してください");
-            return;
-        }
-        if (waitingPlayers.length >= 5) {
-            alert("すでに5人登録されています");
-            return;
-        }
-        waitingPlayers.push({ name: playerName, role: roleSelect });
+        const role = document.getElementById("roleSelect").value;
+        if (!playerName) { alert("名前を入力してください"); return; }
+        if (waitingPlayers.length >= 5) { alert("5人までです"); return; }
+
+        waitingPlayers.push({ name: playerName, role: role });
         updateWaitingList();
-        document.getElementById("playerName").value = ""; // 入力リセット
+        document.getElementById("playerName").value = "";
     }
 
+    // 待機リスト更新
     function updateWaitingList() {
-        const waitingDiv = document.getElementById("waitingList");
-        waitingDiv.innerHTML = "";
-        waitingPlayers.forEach((p, i) => {
+        const listDiv = document.getElementById("waitingList");
+        listDiv.innerHTML = "";
+        waitingPlayers.forEach((p,i) => {
             const div = document.createElement("div");
             div.className = "waiting-item";
             div.textContent = `${i+1}. ${p.name} (${p.role})`;
-            waitingDiv.appendChild(div);
+            listDiv.appendChild(div);
         });
     }
 
-    function getRandomAgent(role) {
-        const pool = role === "自由枠"
-            ? Object.values(agents).flatMap(r => Object.keys(r))
-            : Object.keys(agents[role]);
-
-        const name = pool[Math.floor(Math.random() * pool.length)];
-
-        let roleFound = role;
-        if (role === "自由枠") {
-            for (const r in agents) {
-                if (agents[r][name]) { roleFound = r; break; }
-            }
-        }
-
-        return { name, img: agents[roleFound][name], role: roleFound };
+    // ロール抽選（自由枠含め全員のロールを再抽選）
+    function assignRoles() {
+        if (waitingPlayers.length !== 5) { alert("5人揃えてください"); return; }
+        const roles = ["デュエリスト","センチネル","イニシエーター","コントローラー","自由枠"];
+        const shuffled = [...roles].sort(() => Math.random()-0.5);
+        waitingPlayers.forEach((p,i)=>{
+            p.role = shuffled[i];
+        });
+        updateWaitingList();
     }
 
+    // キャラ抽選
     function generateTeam() {
-        if (waitingPlayers.length < 5) {
-            alert("5人揃ってからチームを生成してください");
-            return;
-        }
+        if (waitingPlayers.length !== 5) { alert("5人揃えてください"); return; }
+
+        const usedAgents = [];
         const teamDiv = document.getElementById("team");
         teamDiv.innerHTML = "";
 
         waitingPlayers.forEach(player => {
-            const agent = getRandomAgent(player.role);
-            createCard(agent, player.role, player.name);
-        });
-    }
+            let role = player.role;
+            let pool;
 
-    function createCard(agent, role, playerName) {
-        const teamDiv = document.getElementById("team");
-        const card = document.createElement("div");
-        card.className = "card";
-        card.innerHTML = `
-        <img src="${agent.img}" alt="${agent.name}">
-        <h3>${role}</h3>
-        <p>${agent.name}</p>
-        <strong>選んだ人: ${playerName}</strong>
-      `;
-        teamDiv.appendChild(card);
+            if (role === "自由枠") {
+                // 自由枠は全キャラプールからまだ選ばれていないキャラのみ
+                pool = Object.keys(agents).flatMap(r => Object.keys(agents[r]))
+                    .filter(a => !usedAgents.includes(a));
+            } else {
+                pool = Object.keys(agents[role]).filter(a => !usedAgents.includes(a));
+            }
+
+            if (pool.length === 0) {
+                alert("キャラが不足しています");
+                return;
+            }
+
+            const chosenName = pool[Math.floor(Math.random()*pool.length)];
+
+            // ロール特定（自由枠の場合は選ばれたキャラのロールを確認）
+            if (role === "自由枠") {
+                for (const r in agents) {
+                    if (agents[r][chosenName]) { role = r; break; }
+                }
+            }
+
+            usedAgents.push(chosenName);
+
+            // カード生成
+            const card = document.createElement("div");
+            card.className = "card";
+            card.innerHTML = `
+          <img src="${agents[role][chosenName]}" alt="${chosenName}">
+          <h3>${player.role}</h3>
+          <p>${chosenName}</p>
+          <strong>選んだ人: ${player.name}</strong>
+        `;
+            teamDiv.appendChild(card);
+        });
     }
 </script>
 </body>
